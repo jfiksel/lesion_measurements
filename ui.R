@@ -60,9 +60,9 @@ navbarPage(
            )
   ),
   tabPanel("View Dataset",
-           mainPanel(
-             tableOutput("viewData")
-           ))
+           #mainPanel(
+             dataTableOutput("viewData")
+           )
 )
 
 

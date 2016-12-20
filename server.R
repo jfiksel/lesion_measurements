@@ -6,6 +6,7 @@ library(sp)
 library(plotKML)
 library(maptools)
 library(raster)
+library(DT)
 function(input, output, session) {
   
   ### Function to read in images
@@ -21,22 +22,26 @@ function(input, output, session) {
   ### Returns a mask that's the same dimension as the image
   ### With a 1 if that point is to be included
   select.points <- function(im, x, y){
-    xy<-cbind(x,y)
-    xy<-as.data.frame(xy)
-    coordinates(xy)=c("x","y")
-    pnts<-vect2rast(xy)
-    poly <- owin(poly=list(x=x, y=y), check=F)
-    SpP<- as(poly,  "SpatialPolygons")
-    attr  =  data.frame(a=1,  b=1)
-    SrDf  =  SpatialPolygonsDataFrame(SpP,  attr)
-    rast <- vect2rast(SrDf,cell.size=1)
-    r <- raster(rast)
-    tum <- coordinates(r)[!is.na(values(r)),]
-    tum <- as.data.frame(tum)
-    mask <- matrix(0L, nrow=nrow(im), ncol=ncol(im))
-    for(x.coord in unique(tum$x)){
-      t <- tum[tum$x==x.coord,]
-      mask[t$x, t$y] <- 1
+    if(is.null(x) | is.null(y)){
+      mask <- matrix(1L, nrow=nrow(im), ncol=ncol(im))
+    }else{
+      xy<-cbind(x,y)
+      xy<-as.data.frame(xy)
+      coordinates(xy)=c("x","y")
+      pnts<-vect2rast(xy)
+      poly <- owin(poly=list(x=x, y=y), check=F)
+      SpP<- as(poly,  "SpatialPolygons")
+      attr  =  data.frame(a=1,  b=1)
+      SrDf  =  SpatialPolygonsDataFrame(SpP,  attr)
+      rast <- vect2rast(SrDf,cell.size=1)
+      r <- raster(rast)
+      tum <- coordinates(r)[!is.na(values(r)),]
+      tum <- as.data.frame(tum)
+      mask <- matrix(0L, nrow=nrow(im), ncol=ncol(im))
+      for(x.coord in unique(tum$x)){
+        t <- tum[tum$x==x.coord,]
+        mask[t$x, t$y] <- 1
+      }
     }
     mask
   }
@@ -156,8 +161,9 @@ function(input, output, session) {
     })
   })
   
-  output$viewData <- renderTable({
-    v$data
+  output$viewData <- renderDataTable({
+    datatable(v$data,colnames=c("Image Names", "Lesion Percentage")) %>%
+      formatRound(columns=2, digits=4)
   })
   observeEvent(input$imgName, {
     v$imageName <- input$imgName
@@ -246,15 +252,20 @@ function(input, output, session) {
   })
   
   observeEvent(input$cropBackground,{
-    v$pawMask <- select.points(v$originalImage, v$pawclick.x, v$pawclick.y)
-    v$paw <- removePoints(v$originalImage, v$pawMask)
-    v$trace.paw <- FALSE
-    v$pawclick.x  <- NULL
-    v$pawclick.y <- NULL
-    enable("pauseTracePaw")
-    enable("selectPaw")
-    enable("resetTracePaw")
-    disable("cropBackground")
+    if(is.null(v$pawclick.x) | is.null(v$pawclick.y)){
+      v$paw <- v$originalImage
+      v$pawMask <- select.points(v$originalImage, v$pawclick.x, v$pawclick.y)
+    }else{
+      v$pawMask <- select.points(v$originalImage, v$pawclick.x, v$pawclick.y)
+      v$paw <- removePoints(v$originalImage, v$pawMask)
+      v$trace.paw <- FALSE
+      v$pawclick.x  <- NULL
+      v$pawclick.y <- NULL
+      enable("pauseTracePaw")
+      enable("selectPaw")
+      enable("resetTracePaw")
+      disable("cropBackground")
+    }
     output$plot1 <- renderPlot({
       app.plot(v$paw)
     })
@@ -288,7 +299,12 @@ function(input, output, session) {
   })
   
   observeEvent(input$addToData, {
-    v$data[nrow(v$data)+1,] <- c(v$imageName, v$percent.tum)
+    if(!(v$imageName %in% v$data[1,])){
+      v$data[nrow(v$data)+1,] <- c(v$imageName, v$percent.tum)
+    }else{
+      index <- which(v$data[1,]==v$imageName)
+      v$data[index,2] <- v$percent.tum
+    }
   })
   
   output$downloadData <- downloadHandler(
