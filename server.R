@@ -6,7 +6,7 @@ library(sp)
 library(plotKML)
 library(maptools)
 library(raster)
-function(input, output) {
+function(input, output, session) {
   
   ### Function to read in images
   read.image <- function(image.file){
@@ -125,12 +125,42 @@ function(input, output) {
     trace.paw = FALSE,
     trace.tum = FALSE,
     tumor.lines = NULL,
-    percent.tum = 0
+    percent.tum = 0,
+    data = data.frame(image = character(), pct.lesion=double(), stringsAsFactors=FALSE),
+    imageName = NULL
   )
   
   ### Read in image
+  ### Automatically set image name to file name
   observeEvent(input$file1, {
     v$originalImage <- read.image(input$file1$datapath)
+    v$paw = NULL
+    v$pawWithTum = NULL
+    v$pawMask = NULL
+    v$tumorMask = NULL
+    v$pawclick.x = NULL
+    v$pawclick.y = NULL
+    v$tumclick.x = NULL
+    v$tumclick.y = NULL
+    v$trace.paw = FALSE
+    v$trace.tum = FALSE
+    v$tumor.lines = NULL
+    v$percent.tum = 0
+    v$imageName <- gsub("(.jpg|.png)","", input$file1$name)
+    updateTextInput(session, inputId = "imgName", label = NULL, value = v$imageName)
+    output$plot1 <- renderPlot({
+      app.plot(v$originalImage,v$pawclick.x, v$pawclick.y)
+    })
+    output$plot2 <- renderPlot({
+      app.plot(v$paw, v$tumclick.x, v$tumclick.y)
+    })
+  })
+  
+  output$viewData <- renderTable({
+    v$data
+  })
+  observeEvent(input$imgName, {
+    v$imageName <- input$imgName
   })
   
   # Handle clicks on the plot for tracing paw & tumors
@@ -256,6 +286,17 @@ function(input, output) {
   observeEvent(input$calculatePercentage, {
     v$percent.tum <- calculatePercentage(v$pawMask, v$tumorMask)
   })
+  
+  observeEvent(input$addToData, {
+    v$data[nrow(v$data)+1,] <- c(v$imageName, v$percent.tum)
+  })
+  
+  output$downloadData <- downloadHandler(
+    filename = "tumorPercentages.csv",
+    content = function(file){
+      write.csv(v$data, file, row.names=FALSE)
+    }
+  )
   
   ### Keep track of click locations if tracing paw or tumor 
   observeEvent(input$plot1_click, {

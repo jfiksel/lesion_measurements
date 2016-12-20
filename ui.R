@@ -9,6 +9,7 @@ navbarPage(
                fileInput("file1", "Choose Paw Image",
                          accept=c(".png",
                                   ".jpg")),
+               textInput("imgName", "Image Name", ""),
                actionButton("selectPaw", "Trace paw"),
                p("Click the button to trace the paw"),
                actionButton("pauseTracePaw", "Pause Tracing"),
@@ -16,7 +17,8 @@ navbarPage(
                actionButton("resetTracePaw", "Reset Tracing"),
                p("Click the button to reset background cropping"),
                actionButton("cropBackground", "Crop Background"),
-               p("Click after you have traced out the paw")
+               p("Click after you have traced out the paw"),
+               downloadButton("downloadData", "Download Dataset")
              ),
              mainPanel(
                plotOutput("plot1", click="plot1_click",
@@ -31,18 +33,20 @@ navbarPage(
   tabPanel("Calculate Tumor Size",
            sidebarLayout(
              sidebarPanel(
-               actionButton("selectTumor", "Trace Tumor"),
-               p("Click the button to trace a tumor"),
+               actionButton("selectTumor", "Trace Lesion"),
+               p("Click the button to trace a lesion"),
                actionButton("pauseTraceTumor", "Pause Tracing"),
-               p("Click the button to pause tumor tracing"),
-               actionButton("resetTraceTumorLast", "Reset Current Tumor Tracing"),
-               p("Click the button to reset tracing of current tumor"),
-               actionButton("resetTraceTumorAll", "Reset All Tumor Tracings"),
-               p("Click the button to reset all tumor tracings"),
-               actionButton("findTumor", "Finish Tracing Tumor"),
-               p("Click after you have traced out a tumor"),
+               p("Click the button to pause lesion tracing"),
+               actionButton("resetTraceTumorLast", "Reset Current Lesion Tracing"),
+               p("Click the button to reset tracing of current lesion"),
+               actionButton("resetTraceTumorAll", "Reset All Lesion Tracings"),
+               p("Click the button to reset all lesion tracings"),
+               actionButton("findTumor", "Finish Tracing Lesion"),
+               p("Click after you have traced out a lesion"),
                actionButton("calculatePercentage", "Calculate Lesion Percentage"),
-               p("Click to calculate the percentage of the paw taken up by lesions")
+               p("Click to calculate the percentage of the paw taken up by lesions"),
+               actionButton("addToData", "Add Image to Data"),
+               p("Click once you have finished processing the image")
              ),
              mainPanel(
                plotOutput("plot2", click="plot2_click",
@@ -54,7 +58,11 @@ navbarPage(
                verbatimTextOutput("info")
              )
            )
-  )
+  ),
+  tabPanel("View Dataset",
+           mainPanel(
+             tableOutput("viewData")
+           ))
 )
 
 
